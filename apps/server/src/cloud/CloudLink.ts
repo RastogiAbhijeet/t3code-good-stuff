@@ -1298,7 +1298,6 @@ const make = Effect.gen(function* () {
       relayUrl,
       relayIssuer,
       endpointRuntimeConfig,
-      publishAgentActivity,
       holdWebhooks,
       revoked,
       latestReachability,
@@ -1308,12 +1307,11 @@ const make = Effect.gen(function* () {
         secrets.get(RELAY_URL_SECRET),
         secrets.get(RELAY_ISSUER_SECRET),
         secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG),
-        secrets.get(PUBLISH_AGENT_ACTIVITY_SECRET),
         secrets.get(HOLD_WEBHOOKS_WHILE_OFFLINE_SECRET),
         secrets.get(CLOUD_LINK_REVOKED),
         reachability.latest,
       ],
-      { concurrency: 8 },
+      { concurrency: 7 },
     );
     // The hostname arrives once cloudflared connects, before any check passes.
     const connector = Option.isSome(endpointRuntimeConfig)
@@ -1333,9 +1331,7 @@ const make = Effect.gen(function* () {
       relayUrl: Option.isSome(relayUrl) ? bytesToString(relayUrl.value) : null,
       relayIssuer: Option.isSome(relayIssuer) ? bytesToString(relayIssuer.value) : null,
       managedTunnelActive: Option.isSome(endpointRuntimeConfig),
-      publishAgentActivity: Option.isSome(publishAgentActivity)
-        ? bytesToString(publishAgentActivity.value) === "true"
-        : false,
+      publishAgentActivity: false,
       holdWebhooksWhileOffline:
         Option.isSome(holdWebhooks) && bytesToString(holdWebhooks.value) === "true",
       ...(Option.isSome(currentReachability) ? { reachability: currentReachability.value } : {}),
@@ -1409,7 +1405,7 @@ const make = Effect.gen(function* () {
         secrets.get(name).pipe(Effect.catch(internalError("read-preferences")));
       const previousActivity = yield* readCurrent(PUBLISH_AGENT_ACTIVITY_SECRET);
       const previousHold = yield* readCurrent(HOLD_WEBHOOKS_WHILE_OFFLINE_SECRET);
-      yield* savePreference(PUBLISH_AGENT_ACTIVITY_SECRET, input.publishAgentActivity);
+      yield* savePreference(PUBLISH_AGENT_ACTIVITY_SECRET, false);
       if (input.holdWebhooksWhileOffline !== undefined) {
         const next = input.holdWebhooksWhileOffline;
         const previous = Option.match(previousHold, {

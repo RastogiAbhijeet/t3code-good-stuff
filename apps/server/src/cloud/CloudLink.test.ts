@@ -170,11 +170,12 @@ const withService = <A, E>(
     );
   });
 
-it.effect("tells the relay before saving the hold setting locally", () =>
+it.effect("keeps activity publishing off while updating the relay hold setting", () =>
   withService({}, ({ preferences, stored, relayCalls }) =>
     Effect.gen(function* () {
       yield* preferences.update({ publishAgentActivity: true, holdWebhooksWhileOffline: true });
       assert.deepEqual(relayCalls, [true]);
+      assert.equal(new TextDecoder().decode(stored.get(PUBLISH_AGENT_ACTIVITY_SECRET)), "false");
       assert.equal(
         new TextDecoder().decode(stored.get(HOLD_WEBHOOKS_WHILE_OFFLINE_SECRET)),
         "true",
@@ -255,7 +256,7 @@ it.effect("two overlapping updates are applied one after the other", () => {
         .update({ publishAgentActivity: false, holdWebhooksWhileOffline: false })
         .pipe(Effect.forkChild);
       yield* Effect.yieldNow;
-      assert.equal(new TextDecoder().decode(stored.get(PUBLISH_AGENT_ACTIVITY_SECRET)), "true");
+      assert.equal(new TextDecoder().decode(stored.get(PUBLISH_AGENT_ACTIVITY_SECRET)), "false");
       release();
       yield* Fiber.join(first);
       yield* Fiber.join(second);
@@ -287,7 +288,7 @@ it.effect("an update the client walks away from still finishes", () => {
       yield* Effect.yieldNow;
       release();
       yield* Fiber.join(interrupted);
-      assert.equal(new TextDecoder().decode(stored.get(PUBLISH_AGENT_ACTIVITY_SECRET)), "true");
+      assert.equal(new TextDecoder().decode(stored.get(PUBLISH_AGENT_ACTIVITY_SECRET)), "false");
       assert.equal(
         new TextDecoder().decode(stored.get(HOLD_WEBHOOKS_WHILE_OFFLINE_SECRET)),
         "true",
